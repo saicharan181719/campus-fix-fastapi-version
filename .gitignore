@@ -1,36 +1,54 @@
+# =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environment
+# Virtual environments
 venv/
 .venv/
 env/
 
+# =========================
 # Environment variables / secrets
+# =========================
 .env
 .env.*
 !.env.example
 
-# Django
+# =========================
+# Django / local files
+# =========================
 db.sqlite3
 *.log
-
-# Django secret/local settings
 local_settings.py
 
-
-# IDE / Editor
-.vscode/
-.idea/
-
-# OS files
-.DS_Store
-Thumbs.db
-
+# Old Django data
 old_data.json
 old_data_utf8.json
 old_data_clean.json
 
+# =========================
+# React / Vite
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Database / SQL
+# =========================
 *.sql
