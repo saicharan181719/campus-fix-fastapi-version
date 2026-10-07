@@ -26,6 +26,17 @@ export default function RegisterPage() {
     setError('');
   };
 
+  // Password validation rules
+  const passwordRules = {
+    minLength: form.password.length >= 8,
+    uppercase: /[A-Z]/.test(form.password),
+    lowercase: /[a-z]/.test(form.password),
+    number: /\d/.test(form.password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(form.password),
+  };
+
+  const passwordValid = Object.values(passwordRules).every(Boolean);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -39,8 +50,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (!passwordValid) {
+      setError('Please meet all password requirements.');
       return;
     }
 
@@ -73,6 +84,38 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  const PasswordRule = ({ valid, children }) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        fontSize: 12,
+        color: valid ? '#047857' : 'var(--gray-500)',
+        marginTop: 5,
+      }}
+    >
+      <span
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: '50%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: valid ? '#d1fae5' : '#f3f4f6',
+          color: valid ? '#047857' : '#9ca3af',
+          fontSize: 10,
+          fontWeight: 700,
+        }}
+      >
+        {valid ? '✓' : '•'}
+      </span>
+
+      <span>{children}</span>
+    </div>
+  );
 
   return (
     <div className="login-page">
@@ -196,6 +239,50 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 autoComplete="new-password"
               />
+
+              {/* Password Rules */}
+              {form.password && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    background: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--gray-700)',
+                      marginBottom: 7,
+                    }}
+                  >
+                    Password requirements
+                  </div>
+
+                  <PasswordRule valid={passwordRules.minLength}>
+                    At least 8 characters
+                  </PasswordRule>
+
+                  <PasswordRule valid={passwordRules.uppercase}>
+                    At least one uppercase letter
+                  </PasswordRule>
+
+                  <PasswordRule valid={passwordRules.lowercase}>
+                    At least one lowercase letter
+                  </PasswordRule>
+
+                  <PasswordRule valid={passwordRules.number}>
+                    At least one number
+                  </PasswordRule>
+
+                  <PasswordRule valid={passwordRules.special}>
+                    At least one special character
+                  </PasswordRule>
+                </div>
+              )}
             </div>
 
             {/* Confirm Password */}

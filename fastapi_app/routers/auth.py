@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-
 from ..database import get_db
 from ..models import User
 from ..schemas.auth import UserCreate, UserLogin
-
 from datetime import datetime, timedelta
-
 from jose import jwt
+import os
+import re
+from dotenv import load_dotenv
 
 
 router = APIRouter(
@@ -16,17 +16,47 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
+
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
 
 
+# =========================
+# Password Validation
+# =========================
+
+def validate_password(password: str):
+
+    if len(password) < 8:
+        return "Password must be at least 8 characters long"
+
+    if not re.search(r"[A-Z]", password):
+        return "Password must contain at least one uppercase letter"
+
+    if not re.search(r"[a-z]", password):
+        return "Password must contain at least one lowercase letter"
+
+    if not re.search(r"\d", password):
+        return "Password must contain at least one number"
+
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return "Password must contain at least one special character"
+
+    return None
+
+
+# =========================
+# Register
+# =========================
+
 @router.post("/register")
 def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
+
     existing_user = db.query(User).filter(
         User.username == user_data.username
     ).first()
@@ -47,7 +77,19 @@ def register(
             detail="Email already exists"
         )
 
-    hashed_password = pwd_context.hash(user_data.password)
+    # Validate password
+    password_error = validate_password(user_data.password)
+
+    if password_error:
+        raise HTTPException(
+            status_code=400,
+            detail=password_error
+        )
+
+    # Hash password
+    hashed_password = pwd_context.hash(
+        user_data.password
+    )
 
     user = User(
         username=user_data.username,
@@ -68,24 +110,38 @@ def register(
         "role": user.role,
     }
 
-import os
 
-from dotenv import load_dotenv
+# =========================
+# JWT Configuration
+# =========================
 
 load_dotenv()
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+
+ALGORITHM = os.getenv(
+    "JWT_ALGORITHM",
+    "HS256"
 )
 
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv(
+        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+        "60"
+    )
+)
+
+
+# =========================
+# Login
+# =========================
 
 @router.post("/login")
 def login(
     user_data: UserLogin,
     db: Session = Depends(get_db)
 ):
+
     user = db.query(User).filter(
         User.username == user_data.username
     ).first()
