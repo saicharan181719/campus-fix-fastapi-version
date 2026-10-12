@@ -2,13 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from ..database import get_db
-from ..models import User
+from ..models import User, PasswordResetToken
 from ..schemas.auth import UserCreate, UserLogin
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 import os
 import re
 from dotenv import load_dotenv
+import hashlib
+import secrets
+from pydantic import BaseModel, EmailStr
+from ..services.email_services import send_password_reset_email
 
 
 router = APIRouter(
@@ -21,6 +25,15 @@ pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
 
 
 # =========================
@@ -186,3 +199,167 @@ def login(
         "username": user.username,
         "role": user.role,
     }
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    generic_message = (
+        "If an account exists for this email, "
+        "a password reset link will be sent."
+    )
+
+    user = db.query(User).filter(
+        User.email == request.email
+    ).first()
+
+    # Always return the same message for unknown email addresses.
+    if not user:
+        return {"message": generic_message}
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(
+        raw_token.encode("utf-8")
+    ).hexdigest()
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        # Invalidate older reset links for this user.
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id
+        ).delete(synchronize_session=False)
+
+        reset_record = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=now + timedelta(minutes=30),
+            created_at=now,
+        )
+
+        db.add(reset_record)
+        db.commit()
+
+        frontend_url = os.getenv(
+            "FRONTEND_URL",
+            "http://localhost:5173",
+        ).rstrip("/")
+
+        reset_link = (
+            f"{frontend_url}/reset-password"
+            f"?token={raw_token}"
+        )
+
+        send_password_reset_email(
+            recipient_email=user.email,
+            reset_link=reset_link,
+        )
+
+    except Exception:
+        db.rollback()
+
+        # Remove the newly created token if sending the email failed.
+        if "reset_record" in locals():
+            try:
+                db.query(PasswordResetToken).filter(
+                    PasswordResetToken.id == reset_record.id
+                ).delete(synchronize_session=False)
+                db.commit()
+            except Exception:
+                db.rollback()
+
+        # Do not expose email delivery or account details.
+        return {"message": generic_message}
+
+    return {"message": generic_message}
+
+
+@router.post("/reset-password")
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    password_error = validate_password(request.new_password)
+
+    if password_error:
+        raise HTTPException(
+            status_code=400,
+            detail=password_error,
+        )
+
+    token_hash = hashlib.sha256(
+        request.token.encode("utf-8")
+    ).hexdigest()
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        reset_record = (
+            db.query(PasswordResetToken)
+            .filter(
+                PasswordResetToken.token_hash == token_hash
+            )
+            .with_for_update()
+            .first()
+        )
+
+        if not reset_record or reset_record.used_at is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired reset link.",
+            )
+
+        # Handle a database driver that returns a naive datetime.
+        expiry = reset_record.expires_at
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+
+        if expiry <= now:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired reset link.",
+            )
+
+        user = db.query(User).filter(
+            User.id == reset_record.user_id
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid or expired reset link.",
+            )
+
+        user.password = pwd_context.hash(
+            request.new_password
+        )
+        reset_record.used_at = now
+
+        # Invalidate any other outstanding reset tokens.
+        other_tokens = db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.id != reset_record.id,
+            PasswordResetToken.used_at.is_(None),
+        ).all()
+
+        for other_token in other_tokens:
+            other_token.used_at = now
+
+        db.commit()
+
+        return {
+            "message": "Password reset successful. You can now log in."
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to reset password right now.",
+        )
+

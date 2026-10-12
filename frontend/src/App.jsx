@@ -12,6 +12,8 @@ import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import MaintenanceDashboard from './pages/MaintenanceDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 import './styles/global.css';
 
@@ -52,6 +54,16 @@ export default function App() {
             <Route
               path="/login"
               element={<LoginPage />}
+            />
+
+            <Route
+              path="/forgot-password"
+              element={<ForgotPasswordPage />}
+            />
+
+            <Route
+              path="/reset-password"
+              element={<ResetPasswordPage />}
             />
 
             <Route

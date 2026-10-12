@@ -4,7 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
-from .models import User, Category, Location, Issue, IssueUpdate
+from .models.models import User, Category, Location, Issue, IssueUpdate, PasswordResetToken
 
 from .routers.auth import router as auth_router
 from .routers.issues import router as issues_router

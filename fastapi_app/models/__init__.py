@@ -1,1 +1,1 @@
-from .models import User, Category, Location, Issue, IssueUpdate
+from .models import User, Category, Location, Issue, IssueUpdate, PasswordResetToken

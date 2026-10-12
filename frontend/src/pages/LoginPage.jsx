@@ -8,6 +8,8 @@ import {
   GraduationCap,
   Briefcase,
   Shield,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 const ROLE_ROUTES = {
@@ -46,7 +48,6 @@ export default function LoginPage() {
   const { login } = useAuth();
 
   const roleFromUrl = searchParams.get('role');
-
   const [selectedRole, setSelectedRole] = useState(
     ROLE_INFO[roleFromUrl] ? roleFromUrl : ''
   );
@@ -58,6 +59,7 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const roleInfo = ROLE_INFO[selectedRole];
 
@@ -66,7 +68,6 @@ export default function LoginPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
-
     setError('');
   };
 
@@ -101,10 +102,6 @@ export default function LoginPage() {
         password: form.password,
       });
 
-      /*
-       * Make sure the account actually belongs to
-       * the role selected on the login screen.
-       */
       if (data.role !== selectedRole) {
         setError(
           `This account is not registered as ${roleInfo.label}. Please select the correct role.`
@@ -113,16 +110,10 @@ export default function LoginPage() {
       }
 
       login(data);
-
       const route = ROLE_ROUTES[data.role] || '/';
-
-      navigate(route, {
-        replace: true,
-      });
+      navigate(route, { replace: true });
     } catch (err) {
-      setError(
-        err.message || 'Login failed. Please try again.'
-      );
+      setError(err?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -130,29 +121,17 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-
       <div className="login-card">
-
-        {/* Header */}
         <div className="login-header">
-
           <div className="login-logo-icon">
             <Wrench size={26} color="white" />
           </div>
 
-          <div className="login-brand">
-            Campus Fix
-          </div>
-
-          <div className="login-tagline">
-            Campus Issue Reporting & Management
-          </div>
-
+          <div className="login-brand">Campus Fix</div>
+          <div className="login-tagline">Campus Issue Reporting & Management</div>
         </div>
 
         <div className="login-body">
-
-          {/* BACK TO HOME BUTTON */}
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -173,22 +152,10 @@ export default function LoginPage() {
             Back to Home
           </button>
 
-          {/* ROLE SELECTION */}
           {!selectedRole ? (
             <>
-              <div
-                style={{
-                  textAlign: 'center',
-                  marginBottom: 22,
-                }}
-              >
-                <h2
-                  style={{
-                    margin: 0,
-                    color: 'var(--gray-900)',
-                    fontSize: 21,
-                  }}
-                >
+              <div style={{ textAlign: 'center', marginBottom: 22 }}>
+                <h2 style={{ margin: 0, color: 'var(--gray-900)', fontSize: 21 }}>
                   Who are you?
                 </h2>
 
@@ -210,94 +177,77 @@ export default function LoginPage() {
                   gap: 12,
                 }}
               >
+                {Object.entries(ROLE_INFO).map(([role, info]) => {
+                  const Icon = info.icon;
 
-                {Object.entries(ROLE_INFO).map(
-                  ([role, info]) => {
-                    const Icon = info.icon;
-
-                    return (
-                      <button
-                        key={role}
-                        type="button"
-                        onClick={() =>
-                          handleRoleSelect(role)
-                        }
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => handleRoleSelect(role)}
+                      style={{
+                        border: '1px solid var(--gray-200)',
+                        background: 'white',
+                        borderRadius: 12,
+                        padding: '18px 12px',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--student-400)';
+                        e.currentTarget.style.background = 'var(--student-50)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--gray-200)';
+                        e.currentTarget.style.background = 'white';
+                      }}
+                    >
+                      <Icon
+                        size={25}
                         style={{
-                          border: '1px solid var(--gray-200)',
-                          background: 'white',
-                          borderRadius: 12,
-                          padding: '18px 12px',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.2s ease',
+                          color:
+                            role === 'student'
+                              ? 'var(--student-500)'
+                              : role === 'faculty'
+                              ? 'var(--faculty-500)'
+                              : role === 'maintenance'
+                              ? 'var(--maint-500)'
+                              : 'var(--admin-500)',
+                          marginBottom: 8,
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor =
-                            'var(--student-400)';
-                          e.currentTarget.style.background =
-                            'var(--student-50)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor =
-                            'var(--gray-200)';
-                          e.currentTarget.style.background =
-                            'white';
+                      />
+
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: 'var(--gray-900)',
+                          fontSize: 14,
                         }}
                       >
+                        {info.label}
+                      </div>
 
-                        <Icon
-                          size={25}
-                          style={{
-                            color:
-                              role === 'student'
-                                ? 'var(--student-500)'
-                                : role === 'faculty'
-                                ? 'var(--faculty-500)'
-                                : role === 'maintenance'
-                                ? 'var(--maint-500)'
-                                : 'var(--admin-500)',
-                            marginBottom: 8,
-                          }}
-                        />
-
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--gray-900)',
-                            fontSize: 14,
-                          }}
-                        >
-                          {info.label}
-                        </div>
-
-                        <div
-                          style={{
-                            color: 'var(--gray-400)',
-                            fontSize: 11,
-                            marginTop: 4,
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {info.description}
-                        </div>
-
-                      </button>
-                    );
-                  }
-                )}
-
+                      <div
+                        style={{
+                          color: 'var(--gray-400)',
+                          fontSize: 11,
+                          marginTop: 4,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {info.description}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
-              <p
-                className="login-footer-text"
-                style={{ marginTop: 22 }}
-              >
+              <p className="login-footer-text" style={{ marginTop: 22 }}>
                 Select your role to access the appropriate portal.
               </p>
             </>
           ) : (
-
-            /* LOGIN FORM */
             <>
               <button
                 type="button"
@@ -322,13 +272,7 @@ export default function LoginPage() {
                 Change role
               </button>
 
-              <div
-                style={{
-                  textAlign: 'center',
-                  marginBottom: 20,
-                }}
-              >
-
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
                 <div
                   style={{
                     width: 46,
@@ -348,31 +292,22 @@ export default function LoginPage() {
                         : 'var(--admin-50)',
                   }}
                 >
-                  {React.createElement(
-                    roleInfo.icon,
-                    {
-                      size: 23,
-                      style: {
-                        color:
-                          selectedRole === 'student'
-                            ? 'var(--student-500)'
-                            : selectedRole === 'faculty'
-                            ? 'var(--faculty-500)'
-                            : selectedRole === 'maintenance'
-                            ? 'var(--maint-500)'
-                            : 'var(--admin-500)',
-                      },
-                    }
-                  )}
+                  {React.createElement(roleInfo.icon, {
+                    size: 23,
+                    style: {
+                      color:
+                        selectedRole === 'student'
+                          ? 'var(--student-500)'
+                          : selectedRole === 'faculty'
+                          ? 'var(--faculty-500)'
+                          : selectedRole === 'maintenance'
+                          ? 'var(--maint-500)'
+                          : 'var(--admin-500)',
+                    },
+                  })}
                 </div>
 
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: 20,
-                    color: 'var(--gray-900)',
-                  }}
-                >
+                <h2 style={{ margin: 0, fontSize: 20, color: 'var(--gray-900)' }}>
                   {roleInfo.label} Login
                 </h2>
 
@@ -385,27 +320,13 @@ export default function LoginPage() {
                 >
                   {roleInfo.description}
                 </p>
-
               </div>
 
-              <form
-                onSubmit={handleSubmit}
-                autoComplete="off"
-              >
+              <form onSubmit={handleSubmit} autoComplete="off">
+                {error && <div className="login-error">{error}</div>}
 
-                {error && (
-                  <div className="login-error">
-                    {error}
-                  </div>
-                )}
-
-                {/* Username */}
                 <div className="form-group">
-
-                  <label
-                    className="form-label"
-                    htmlFor="login-username"
-                  >
+                  <label className="form-label" htmlFor="login-username">
                     Username
                   </label>
 
@@ -420,30 +341,62 @@ export default function LoginPage() {
                     autoFocus
                     autoComplete="username"
                   />
-
                 </div>
 
-                {/* Password */}
                 <div className="form-group">
-
-                  <label
-                    className="form-label"
-                    htmlFor="login-password"
-                  >
+                  <label className="form-label" htmlFor="login-password">
                     Password
                   </label>
 
-                  <input
-                    id="login-password"
-                    className="form-input"
-                    type="password"
-                    name="password"
-                    placeholder="Enter your password"
-                    value={form.password}
-                    onChange={handleChange}
-                    autoComplete="current-password"
-                  />
-
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="login-password"
+                      className="form-input"
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      placeholder="Enter your password"
+                      value={form.password}
+                      onChange={handleChange}
+                      autoComplete="current-password"
+                      style={{ paddingRight: 44 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                      style={{
+                        position: 'absolute',
+                        right: 12,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 4,
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--gray-500)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              
+                <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 12 }}>
+                  <Link
+                    to="/forgot-password"
+                    style={{
+                      color: 'var(--student-600)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Forgot Password?
+                  </Link>
                 </div>
 
                 <button
@@ -457,7 +410,6 @@ export default function LoginPage() {
                   }}
                   disabled={loading}
                 >
-
                   {loading ? (
                     <>
                       <span
@@ -469,18 +421,14 @@ export default function LoginPage() {
                           borderTopColor: 'white',
                         }}
                       />
-
                       Signing in…
                     </>
                   ) : (
                     'Sign In'
                   )}
-
                 </button>
-
               </form>
 
-              {/* Student registration */}
               {selectedRole === 'student' && (
                 <p
                   className="login-footer-text"
@@ -490,7 +438,6 @@ export default function LoginPage() {
                   }}
                 >
                   Don't have a student account?{' '}
-
                   <Link
                     to="/register"
                     style={{
@@ -514,14 +461,10 @@ export default function LoginPage() {
                   Account access is managed by the administrator.
                 </p>
               )}
-
             </>
           )}
-
         </div>
-
       </div>
-
     </div>
   );
 }
